@@ -2,7 +2,9 @@
 # Rigorous Analysis!
 # Gil Walzer
 
-import nltk, re, tokenize
+import re
+
+import nltk, tokenize
 
 from spacycaller import SpacyCaller
 from parse_vendors import Vendor
@@ -19,10 +21,6 @@ class Analyzer:
         complexity = complexity_analysis(tokens)
         
         rsa = review_sentiment_analysis(vendor)
-        
-def pos_tag(text):
-    tags = nltk.pos_tag(tokens)
-    return tags
     
 def get_content_words(tokens):
     content_POS_list = ["FW", "JJ", "JJR", "JJS", "NN", "MD", "NNP", "NNPS", "NNS", "RB", "RBR", "RP", "UH", "VB", "VBD", "VBG", "VBN", "VBP", "VBZ", "SYM"]
@@ -65,13 +63,13 @@ def review_sentiment_analysis(vendor):
             rating_sum += float(rating)
             num_ratings += 1
         
-    for key in sent_sum_keys():
+    for key in sent_sum.keys():
         sent_sum[key] = sent_sum[key] / num_ratings
         
     return (rating_sum/num_ratings, sent_sum)    
     
 def pos_counts(tokens):
-    verb_count, noun_count, adj_count, adv_count, modal_count = 0
+    verb_count, noun_count, adj_count, adv_count, modal_count = 0,0,0,0,0
     for token in list(tokens):
         if "MD" in token.tag_:
             modal_count += 1
@@ -129,7 +127,7 @@ def complexity_analysis(tokens):
     
     punct_count = 0.0
     for token in tokens:
-        if "PUNCT" in token.pos_
+        if "PUNCT" in token.pos_:
             punct_count += 1
     
     pausality = punct_count / sentence_count
@@ -153,8 +151,7 @@ def uncertainty_analysis(tokens):
     for word in uncertain_words:
         uncertainty_count += txt.count(word)
         
-    other_reference_words = 
-       [" he ", "He ", " she ", "She ",
+    other_reference_words = [" he ", "He ", " she ", "She ",
         " him.", " him,", " him ", "himself",
         " her.", " her,", " her ", "herself",
         "It ", " it ", " it.", " it ", " itself ",
@@ -167,7 +164,7 @@ def uncertainty_analysis(tokens):
         
     return (uncertainty_count, other_reference_count)
     
-    def nonimmediacy_analysis(tokens):
+def nonimmediacy_analysis(tokens):
     
     self_ref = ["I ", " i ", " me.", " me!", " me,", " me ", "Me "]
     self_ref_count = 0
@@ -193,4 +190,7 @@ def diversity_analysis(tokens):
     unique_contents = count_unique(contents)
     
 
-            
+"""        
+def pos_tag(text):
+    tags = nltk.pos_tag(tokens)
+    return tags"""

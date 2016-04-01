@@ -17,13 +17,13 @@ class Vendor:
         self.reviews_string = reviews_scraped
         self.reviews = reviews
     
-   def __str__(self):
-       sb = self.id + " " + self.username + "\n" _ self.feedback + " " + self.transactions + "\n\n" self.profile + "\n\n" self.reviews_string
+    def __str__(self):
+       sb = self.id + " " + self.username + "\n" + self.feedback + " " + self.transactions + "\n\n" + self.profile + "\n\n" + self.reviews_string
        return unicode(sb)
        
 # May be depreciated
 def parse_vendors(**keyword_parameters):
-    filepath = "../Deep Web Data/"
+    filepath = "../../Deep Web Data/"
     
     if "filepath" in keyword_parameters:
         filepath = filepath + keyword_parameters['filepath']
@@ -49,32 +49,31 @@ def parse_vendors(**keyword_parameters):
         
         vendor_raw_html = ""
         with codecs.open(filepath + filename, "r", "utf-8") as vendor_file:
-            vendor_raw_html = vendor_file_.read()
+            vendor_raw_html = vendor_file.read()
        
-       h = HTMLParser()
+        h = HTMLParser()
        
-       profile_raw_info = re.split('<div class="h1">|</div><table class="zebra">
-       <tr><th>category</th><th>title<th><th>price', vendor_raw_html)
-       profile_raw_info_2 = profile_raw_info[1]
+        profile_raw_info = re.split('<div class="h1">|</div><table class="zebra"><tr><th>category</th><th>title<th><th>price', vendor_raw_html)
+        profile_raw_info_2 = profile_raw_info[1]
+
+        profile_scraped = re.split("<[^<>]*>", profile_raw_info_2)
+
+        review_raw_info = re.split('<table class="zebra"><tr><th>rating</th><th>review</th><th>freshness</th><th>item</th>', vendor_raw_html)
+        reviews = ""
+        if len(review_raw_info) > 1:
+            review_raw_info_2 = review_raw_info[1]
+
+            review_list = scrape_reviews(review_raw_info_2)
+            reviews = review_list_to_string(review_list)
        
-       profile_scraped = re.split("<[^<>]*>", profile_raw_info_2)
-       
-       review_raw_info = re.split('<table class="zebra"><tr><th>rating</th><th>review</th><th>freshness</th><th>item</th>', vendor_raw_html)
-       reviews = ""
-       if len(review_raw_info) > 1:
-           review_raw_info_2 = review_raw_info[1]
-           
-           review_list = scrape_reviews(review_raw_info_2)
-           reviews = review_list_to_string(review_list)
-           
-          (username, duration, rank, feedback, transactions, fans, profile) = scrape_profile(profile_scraped)
-          
-          profile = h.unescape(profile)
-          
-          vendor_id = filename.split('.')[0]
-          vendor = Vendor(username, vendor_id, duration, rank, feedback, transactions, fans, profile, reviews, review_list)
-          
-          vendors.append(vendor)
+        (username, duration, rank, feedback, transactions, fans, profile) = scrape_profile(profile_scraped)
+
+        profile = h.unescape(profile)
+
+        vendor_id = filename.split('.')[0]
+        vendor = Vendor(username, vendor_id, duration, rank, feedback, transactions, fans, profile, reviews, review_list)
+
+        vendors.append(vendor)
           
     return vendors
 
@@ -143,16 +142,22 @@ def scrape_profile(profile_scraped):
     prev_item = None
     in_profile = False
     
+    #print profile_scraped
     for item in profile_scraped:
         if prev_item is None:
             username = item
+
         elif "has been a vendor for" in prev_item:
             duration = item
+              # print duration
+            #     print "prev_item"
+
         elif "ranked in the" in prev_item:
             split = re.split("[top |%]", item)
             for each in split:
                 if each is not "":
                     rank = each
+                    #print "breaking"
                     break
                     
         elif "of sellers with" in prev_item: 
@@ -160,6 +165,7 @@ def scrape_profile(profile_scraped):
             for each in split:
                 if each is not '':
                     feedback = each
+                    #print "breaking"
                     break
                     
         elif "transactions" in item:
@@ -172,11 +178,13 @@ def scrape_profile(profile_scraped):
             in_profile = True
             profile_scraped_string = profile_scraped_string + item 
             
-        months, unit = duration.split(" ")
-        if "year" in unit:
-            months = str(int(months)*12)
-            
-        #FIX THIS THING
-        re.sub("-----BEGIN PGP PUBLIC KEY BLOCK-----.+-----END PGP PUBLIC KEY BLOCK-----", "", profile_scraped_string)
+        prev_item = item
+
+    months, unit = duration.split(" ")
+    if "year" in unit:
+        months = str(int(months)*12)
         
-        return (username, duration, rank, feedback, transactions, fans, profile_scraped_string)
+    #FIX THIS THING
+    re.sub("-----BEGIN PGP PUBLIC KEY BLOCK-----.+-----END PGP PUBLIC KEY BLOCK-----", "", profile_scraped_string)
+    
+    return (username, duration, rank, feedback, transactions, fans, profile_scraped_string)
