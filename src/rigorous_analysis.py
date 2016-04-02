@@ -4,11 +4,31 @@
 
 import re
 
-import nltk, tokenize
+import nltk, codecs, json
 
 from spacycaller import SpacyCaller
 from parse_vendors import Vendor
 from vaderSentiment.vaderSentiment import sentiment as vaderSentiment
+
+class Analysis:
+    def __init__(self, fans, transactions, feedback, rank, months, vendor_id, username, quantity, pos_counts, complexity, uncertainty, nonimmediacy, emotiveness, diversity, profile_sentiments, review_sentiments):
+        self.quantity = quantity
+        self.pos_counts = pos_counts
+        self.complexity = complexity
+        self.uncertainty = uncertainty
+        self.diversity = diversity
+        self.nonimmediacy = nonimmediacy
+        self.emotiveness = emotiveness
+        self.profile_sentiments = profile_sentiments
+        self.review_sentiments = review_sentiments
+
+        self.fans = fans
+        self.rank = rank
+        self.transactions = transactions
+        self.feedback = feedback
+        self.months = months
+        self.vendor_id = vendor_id
+        self.username = username
 
 class Analyzer:
     def __init__(self):
@@ -17,11 +37,38 @@ class Analyzer:
     def analyze(self, vendor):
         tokens = self.spacy.spacy_analyze_vendor(vendor)
         
+        #print tokens
+        pos_count_tuple = pos_counts(tokens)
         quantity = quantity_analysis(tokens)
         complexity = complexity_analysis(tokens)
-        
-        rsa = review_sentiment_analysis(vendor)
+        uncertainty = uncertainty_analysis(tokens)
+        nonimmediacy = nonimmediacy_analysis(tokens)
+        emotiveness = emotiveness_analysis(pos_count_tuple)
+        diversity = diversity_analysis(tokens)
+        review_sentiments = review_sentiment_analysis(vendor)
+        profile_sentiments = profile_sentiment_analysis(vendor)
+
+        fans = vendor.fans
+        transactions = vendor.transactions
+        feedback = vendor.feedback
+        months = vendor.months
+        vendor_id = vendor.id
+        username = vendor.username
+        rank = vendor.rank
+
+        return Analysis(fans, transactions, feedback, rank, months, vendor_id, username, quantity, pos_count_tuple, complexity, uncertainty, nonimmediacy, emotiveness, diversity, profile_sentiments, review_sentiments)
     
+    def __str__(self):
+        return self.__dict__
+
+def create_Analysis_from_json(jsons):
+    a = json.loads(jsons)
+    
+    analysis = Analysis(a["fans"], a["transactions"], a["feedback"], a["rank"], a["months"], a["vendor_id"],
+    a["username"], a["quantity"], a["pos_counts"], a["complexity"], a["uncertainty"],
+    a["nonimmediacy"], a["emotiveness"], a["diversity"], a["profile_sentiments"], a["review_sentiments"])
+    return analysis
+
 def get_content_words(tokens):
     content_POS_list = ["FW", "JJ", "JJR", "JJS", "NN", "MD", "NNP", "NNPS", "NNS", "RB", "RBR", "RP", "UH", "VB", "VBD", "VBG", "VBN", "VBP", "VBZ", "SYM"]
     
@@ -34,13 +81,23 @@ def get_content_words(tokens):
     return content_words
     
 # actually takes any iterable
-def count_unique(tokens):
-    s = set()
+def frequencies(tokens):
+    s = {}
     for token in tokens:
-        s.put(token)
-        
-    return len(s)
-    
+        if token.text in s:
+            s[token.text] = s[token.text] + 1
+        else:
+            s[token.text] = 0
+
+    return s
+
+def profile_sentiment_analysis(vendor):
+    profile = vendor.profile
+    profile = profile.encode(errors="ignore")
+    vs = vaderSentiment(profile)
+
+    return vs
+
 def review_sentiment_analysis(vendor):
     review_list = vendor.reviews
     rating_sum = 0.0
@@ -52,6 +109,7 @@ def review_sentiment_analysis(vendor):
     sent_sum = {"pos":0.0, "neg":0.0, "neu":0.0, "compound":0.0}
     for review in review_list:
         message = review[1]
+        message = message.encode(errors="ignore")
         rating = review[0]
 
         vs = vaderSentiment(message)
@@ -137,7 +195,7 @@ def complexity_analysis(tokens):
     return complexity
     
 def uncertainty_analysis(tokens):
-    ["appear", "Appear",
+    uncertain_words = ["appear", "Appear",
     "seem", "Seem",
     "suggest", "Suggest",
     "indicat", "Indicat",
@@ -184,11 +242,14 @@ def emotiveness_analysis(counts):
     
 def diversity_analysis(tokens):
     num_tokens = len(tokens)
-    unique_tokens = count_unique(tokens)
-    
+    unique_tokens = frequencies(tokens)
+    #print unique_tokens
     contents = get_content_words(tokens)
-    unique_contents = count_unique(contents)
+    unique_contents = frequencies(contents)
     
+    lex_div = num_tokens * 1.0 / len(unique_tokens.keys())
+    con_div = len(contents) * 1.0/len(unique_contents.keys())
+    return (lex_div, con_div)
 
 """        
 def pos_tag(text):

@@ -1,6 +1,6 @@
 # parse_vendors.py
 # Gil Walzer
-import codecs, os, re, sqlite3
+import codecs, os, re, sqlite3, json
 from HTMLParser import HTMLParser
 
 class Vendor: 
@@ -20,7 +20,12 @@ class Vendor:
     def __str__(self):
        sb = self.id + " " + self.username + "\n" + self.feedback + " " + self.transactions + "\n\n" + self.profile + "\n\n" + self.reviews_string
        return unicode(sb)
-       
+
+def create_Vendor_from_json(jsons):
+    v = json.loads(jsons)
+    vendor = Vendor(v["username"], v["id"], v["months"], v["rank"], v["feedback"], v["transactions"], v["fans"], v["profile"], v["reviews_string"], v["reviews"])
+    return vendor
+
 # May be depreciated
 def parse_vendors(**keyword_parameters):
     filepath = "../../Deep Web Data/"
@@ -69,6 +74,9 @@ def parse_vendors(**keyword_parameters):
         (username, duration, rank, feedback, transactions, fans, profile) = scrape_profile(profile_scraped)
 
         profile = h.unescape(profile)
+        profile = profile.replace('\\', '')
+
+     #   print profile
 
         vendor_id = filename.split('.')[0]
         vendor = Vendor(username, vendor_id, duration, rank, feedback, transactions, fans, profile, reviews, review_list)
@@ -137,13 +145,24 @@ def review_list_to_string(review_list):
     return reviews
     
 def scrape_profile(profile_scraped):
-    username, duration, rank, feedback, transactions, fans, profile_scraped_string = "", "", "", "", "", "", ""
+    username, duration, rank, feedback, transactions, fans, profile_scraped_string = "", "", "", "", "", "", u""
     
     prev_item = None
     in_profile = False
     
-    #print profile_scraped
-    for item in profile_scraped:
+    profile_scraped_2 = []
+    for each in profile_scraped:
+        if each is u"":
+            pass
+        elif each.isspace():
+            pass
+        else:
+            profile_scraped_2.append(each)
+            
+    for item in profile_scraped_2:
+        if item is u"category": # in item:
+            break
+
         if prev_item is None:
             username = item
 
@@ -155,7 +174,7 @@ def scrape_profile(profile_scraped):
         elif "ranked in the" in prev_item:
             split = re.split("[top |%]", item)
             for each in split:
-                if each is not "":
+                if len(each) > 0:
                     rank = each
                     #print "breaking"
                     break
@@ -168,10 +187,12 @@ def scrape_profile(profile_scraped):
                     #print "breaking"
                     break
                     
-        elif "transactions" in item:
+        elif item == " transactions":
             transactions = prev_item
+            if "more than " in transactions:
+                transactions = transactions.split("more than ")[1]
         
-        elif "fans" in item:
+        elif item == " fans - ": # in item:
             fans = prev_item
         
         elif ("report this vendor" in prev_item) or (in_profile):
@@ -180,11 +201,15 @@ def scrape_profile(profile_scraped):
             
         prev_item = item
 
+    pss2 = profile_scraped_string.replace(".\n", ". ")
+    pss2 = pss2.replace("\n", "")
+    pss2 = pss2.replace(u"\u2013", "-")
+
     months, unit = duration.split(" ")
     if "year" in unit:
         months = str(int(months)*12)
         
     #FIX THIS THING
-    re.sub("-----BEGIN PGP PUBLIC KEY BLOCK-----.+-----END PGP PUBLIC KEY BLOCK-----", "", profile_scraped_string)
+    pss2 = re.sub("-----BEGIN PGP PUBLIC KEY BLOCK-----.+K-----", "", pss2)
     
-    return (username, duration, rank, feedback, transactions, fans, profile_scraped_string)
+    return (username, months, rank, feedback, transactions, fans, pss2)
