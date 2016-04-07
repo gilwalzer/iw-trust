@@ -28,60 +28,72 @@ def create_Vendor_from_json(jsons):
 
 # May be depreciated
 def parse_vendors(**keyword_parameters):
+
     filepath = "../../Deep Web Data/"
     
     if "filepath" in keyword_parameters:
-        filepath = filepath + keyword_parameters['filepath']
+        filepath_files = filepath + keyword_parameters['filepath']
     else:
-        filepath = filepath + "GwernVP"
+        filepath_files = filepath + "GwernVP"
+        filepath_scanned = filepath + "GwernJSON"
        
     if "sample" in keyword_parameters:
         limit = keyword_parameters['sample']
-        print limit
-        
-    filepath = filepath + "/"
-    filenames = os.listdir(filepath)
+        #print limit
+    else:
+        limit = 100000    
+
+    filepath_files = filepath_files + "/"
+    filenames = os.listdir(filepath_files)
+    #print len(filenames)
     
+    scanned_files = set(os.listdir(filepath_scanned + "/" ))
+    #print len(scanned_files)
+
     i = 0
     vendors = []
     nonascii_filenames = []
     
     for filename in filenames:
+        # for sampling
         if i > limit:
             break
         else:
             i += 1
         
-        vendor_raw_html = ""
-        with codecs.open(filepath + filename, "r", "utf-8") as vendor_file:
-            vendor_raw_html = vendor_file.read()
-       
-        h = HTMLParser()
-       
-        profile_raw_info = re.split('<div class="h1">|</div><table class="zebra"><tr><th>category</th><th>title<th><th>price', vendor_raw_html)
-        profile_raw_info_2 = profile_raw_info[1]
+        # make sure the file hasn't been checked yet!
+        filename_json = filename.split(".")[0] + ".json"
+        if filename_json not in scanned_files:
+            vendor_raw_html = ""
+            with codecs.open(filepath_files + filename, "r", "utf-8") as vendor_file:
+                vendor_raw_html = vendor_file.read()
+           
+            h = HTMLParser()
+           
+            profile_raw_info = re.split('<div class="h1">|</div><table class="zebra"><tr><th>category</th><th>title<th><th>price', vendor_raw_html)
+            profile_raw_info_2 = profile_raw_info[1]
 
-        profile_scraped = re.split("<[^<>]*>", profile_raw_info_2)
+            profile_scraped = re.split("<[^<>]*>", profile_raw_info_2)
 
-        review_raw_info = re.split('<table class="zebra"><tr><th>rating</th><th>review</th><th>freshness</th><th>item</th>', vendor_raw_html)
-        reviews = ""
-        if len(review_raw_info) > 1:
-            review_raw_info_2 = review_raw_info[1]
+            review_raw_info = re.split('<table class="zebra"><tr><th>rating</th><th>review</th><th>freshness</th><th>item</th>', vendor_raw_html)
+            reviews = ""
+            if len(review_raw_info) > 1:
+                review_raw_info_2 = review_raw_info[1]
 
-            review_list = scrape_reviews(review_raw_info_2)
-            reviews = review_list_to_string(review_list)
-       
-        (username, duration, rank, feedback, transactions, fans, profile) = scrape_profile(profile_scraped)
+                review_list = scrape_reviews(review_raw_info_2)
+                reviews = review_list_to_string(review_list)
+           
+            (username, duration, rank, feedback, transactions, fans, profile) = scrape_profile(profile_scraped)
 
-        profile = h.unescape(profile)
-        profile = profile.replace('\\', '')
+            profile = h.unescape(profile)
+            profile = profile.replace('\\', '')
 
-     #   print profile
+         #   print profile
 
-        vendor_id = filename.split('.')[0]
-        vendor = Vendor(username, vendor_id, duration, rank, feedback, transactions, fans, profile, reviews, review_list)
+            vendor_id = filename.split('.')[0]
+            vendor = Vendor(username, vendor_id, duration, rank, feedback, transactions, fans, profile, reviews, review_list)
 
-        vendors.append(vendor)
+            vendors.append(vendor)
           
     return vendors
 

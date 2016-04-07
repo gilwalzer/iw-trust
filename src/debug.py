@@ -22,14 +22,11 @@ def read_analyses_json(classifier):
     analyses = []
     
     for filename in filenames:
-
-        print "\n"
-        print filename
         
         with codecs.open(filepath + filename, "r", "utf-8", errors="ignore") as analysis_file:
             analysis_data = analysis_file.read()
             analysis = rigorous_analysis.create_Analysis_from_json(analysis_data)
-            print analysis.__dict__
+            #print analysis.__dict__
             analyses.append(analysis)
 
     return analyses
@@ -48,15 +45,32 @@ def write_vendors_json(vendors, classifier):
 def read_vendors_json(classifier):
     filepath = "../../Deep Web Data/" + classifier + "/"
     filenames = os.listdir(filepath)
-    
-    vendors = []
-    
+
     for filename in filenames:
         
         with codecs.open(filepath + filename, "r", "utf-8", errors="ignore") as vendor_file:
             vendor_data = vendor_file.read()
             vendor = parse_vendors.create_Vendor_from_json(vendor_data)
             vendors.append(vendor)
+
+    return vendors
+
+def read_unanalyzed_vendors_json(classifier):
+
+    filepath = "../../Deep Web Data/" + classifier
+    filenames = os.listdir(filepath + "/")
+    
+    analyzed_already = os.listdir(filepath + "Analyses")
+    aa_fnames = set(analyzed_already)
+
+    vendors = []
+    
+    for filename in filenames:
+        if filename not in aa_fnames:
+            with codecs.open(filepath + filename, "r", "utf-8", errors="ignore") as vendor_file:
+                vendor_data = vendor_file.read()
+                vendor = parse_vendors.create_Vendor_from_json(vendor_data)
+                vendors.append(vendor)
 
     return vendors
 
@@ -95,7 +109,11 @@ def parse_sample(**keyword_parameters):
     return sample
 
 def parse_all():
-    return parse_vendors.parse_all()
+    return parse_vendors.parse_vendors()
 
 def print_vendor(vendor):
     print vendor.profile, vendor.reviews
+
+def print_analyses(analyses):
+    for analysis in analyses:
+        print analysis.__dict__
