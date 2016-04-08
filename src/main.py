@@ -72,11 +72,11 @@ def handle_args(args):
 					analysis = analyzer.analyze(each)
 					analyses.append(analysis)
 
-				debug.write_analyses_json(analyses, "GwernSampleJSONAnalyses")
+				debug.write_analyses_json(analyses, "GwernJSONAnalyses")
 
 			elif sys.argv[2] == "a":
 				sys.stderr.write("\nReading analyses.\n")
-				analyses = debug.read_analyses_json("GwernSampleJSONAnalyses")
+				analyses = debug.read_analyses_json("GwernJSONAnalyses")
 
 	return analyses
 
@@ -102,6 +102,10 @@ print "\n\n\n"
 
 print "original parameters are: \n",
 nn.print_connections()
+
 sys.stderr.write("\nBeginning training.\n")
 nn.train()
 sys.stderr.write("\nFinished.\n")
+
+iv = (0,1000,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+nn.activate(iv)

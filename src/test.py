@@ -50,11 +50,13 @@ def do_stuff():
 			trndata.addSample(input_v[0], input_v[1])
 
 	print trndata, "---------------------", tstdata
-	tstdata._convertToOneOfMany(bounds=(0, 1))
-	trndata._convertToOneOfMany(bounds=(0, 1))
-	DS._convertToOneOfMany(bounds=(0, 1))
 
-	nn = buildNetwork(inputdim, 3, 2, hiddenclass=LSTMLayer, outclass=SoftmaxLayer, outputbias=False, recurrent=True)
+	return trndata, tstdata
+
+def buildntrain(tstdata, trndata, od):
+
+	inputdim = 2 
+	nn = buildNetwork(inputdim, 3, od, hiddenclass=LSTMLayer, outclass=SoftmaxLayer, outputbias=False, recurrent=True)
 	    
 	trainer = BackpropTrainer(nn, trndata, learningrate = 0.0005, momentum = 0.99)
 	b1, b2 = trainer.trainUntilConvergence(verbose=True,
@@ -67,4 +69,12 @@ def do_stuff():
 	print ".5:", nn.activate([.5,.5])
 	print "1.5:", nn.activate([1.5,1.5])
 	print "1:", nn.activate([1, 1])
-do_stuff()
+
+trnd, tstd = do_stuff()
+buildntrain(tstd, trnd, 1)
+
+tstd._convertToOneOfMany(bounds=(0, 1))
+trnd._convertToOneOfMany(bounds=(0, 1))
+#DS._convertToOneOfMany(bounds=(0, 1))
+
+buildntrain(tstd, trnd, 2)

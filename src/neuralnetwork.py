@@ -116,7 +116,7 @@ class MyNN:
         else: 
             trustworthy = 0
         """
-        input_v = (fans, trustworthy, word_count, sentence_count, np_count, verb_count, 
+        input_v = (fans, 1, word_count, sentence_count, np_count, verb_count, 
             avg_num_of_clauses, avg_sentence_length, avg_word_length, avg_length_np, pausality,
             uncertainty_count, other_ref, modal_count, lex_d, con_d, self_ref, group_ref, e,
             ppos, pneg, pneu, pcom, rpos, rneg, rneu, rcom)
@@ -173,3 +173,6 @@ class MyNN:
         print b1, b2
         print "new parameters are: "
         self.print_connections()
+
+    def activate(self, input_v):
+        print self.nn.activate(input_v)
