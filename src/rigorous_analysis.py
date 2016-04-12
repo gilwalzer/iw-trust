@@ -11,6 +11,12 @@ from parse_vendors import Vendor
 from vaderSentiment.vaderSentiment import sentiment as vaderSentiment
 
 class Analysis:
+
+    flat_attributes = ["feedback", "months", "rank", "fans", "transactions", "word_count", "sentence_count", "np_count", "verb_count",
+                "avg_num_of_clauses", "avg_sentence_length", "avg_word_length", "avg_length_np", "pausality",
+                "uncertainty_count", "other_ref", "modal_count", "lex_d", "con_d", "self_ref", "group_ref", "e",
+                "ppos", "pneg", "pneu", "pcom", "rpos", "rneg", "rneu", "rcom"]
+
     def __init__(self, fans, transactions, feedback, rank, months, vendor_id, username, quantity, pos_counts, complexity, uncertainty, nonimmediacy, emotiveness, diversity, profile_sentiments, review_sentiments):
         self.quantity = quantity
         self.pos_counts = pos_counts
@@ -29,6 +35,97 @@ class Analysis:
         self.months = months
         self.vendor_id = vendor_id
         self.username = username
+
+    """ expects list of strings """
+    def make_input_vector(self, attrs):
+        params = analysis.flatten()
+        param_list = []
+           
+        for each in attrs:
+            param_list.append(params[each])
+
+        param_tuple = tuple(n for n in param_list)
+        
+        return param_tuple
+
+    def flatten(self):
+        feedback = 0
+        months = 1
+
+        try:
+            months = int(self.months)
+            feedback = float(self.feedback)
+
+        except ValueError:
+            pass
+
+        rank = self.rank
+        transactions = self.transactions
+        fans = self.fans
+
+        pc = self.pos_counts
+
+        q = self.quantity               # 4
+
+        word_count = q[0]
+        np_count = q[1]
+        sentence_count = q[2]
+        verb_count = pc[0]
+
+        c = self.complexity             # 5
+        avg_num_of_clauses = c[0]
+        avg_sentence_length = c[1]
+        avg_word_length = c[2]
+        avg_length_np = c[3]
+        pausality = c[4]
+
+        u = self.uncertainty            # 3
+        uncertainty_count = float(u[0])
+        other_ref = u[1]
+        modal_count = pc[4]
+
+        d = self.diversity              # 2
+        lex_d = d[0]
+        con_d = d[1]
+
+        n = self.nonimmediacy           # 2
+
+        self_ref = n[0]*1.0 / word_count
+        group_ref = n[1]*1.0 / word_count
+
+        e = self.emotiveness            # 1 
+
+        ps = self.profile_sentiments    # 5
+        ppos = ps["pos"]
+        pneg = ps["neg"]
+        pneu = ps["neu"]
+        pcom = ps["compound"]
+
+        rs, rpos, rneg, rneu, rcom = 0,0,0,0,0
+        rs_both = self.review_sentiments     # 4
+        if rs_both is not None:
+            avg_rating = rs_both[0]
+            rs = rs_both[1]
+            rpos = rs["pos"]
+            rneg = rs["neg"]
+            rneu = rs["neu"]
+            rcom = rs["compound"]
+                                                # 23 = total 
+
+        flat_tuple = (feedback, months, rank, fans, transactions, word_count, sentence_count, np_count, verb_count, 
+                avg_num_of_clauses, avg_sentence_length, avg_word_length, avg_length_np, pausality,
+                uncertainty_count, other_ref, modal_count, lex_d, con_d, self_ref, group_ref, e,
+                ppos, pneg, pneu, pcom, rpos, rneg, rneu, rcom)
+
+        flat_dict = {"feedback": feedback, "months": months, "rank": rank, "fans": fans, "transactions": transactions, 
+                "word_count": word_count, "sentence_count": sentence_count, "np_count": np_count, "verb_count": verb_count, 
+                "avg_num_of_clauses": avg_num_of_clauses, "avg_sentence_length": avg_sentence_length, 
+                "avg_word_length": avg_word_length, "avg_length_np": avg_length_np, "pausality": pausality,
+                "uncertainty_count": uncertainty_count, "other_ref": other_ref, "modal_count": modal_count,
+                "lex_d": lex_d, "con_d": con_d, "self_ref": self_ref, "group_ref": group_ref, "e": e,
+                "ppos": ppos, "pneg": pneg, "pneu": pneu, "pcom": pcom, "rpos": rpos, "rneg": rneg, 
+                "rneu": rneu, "rcom": rcom}
+        return flat_dict, flat_tuple
 
 class Analyzer:
     def __init__(self):
@@ -60,6 +157,8 @@ class Analyzer:
     
     def __str__(self):
         return self.__dict__
+
+    
 
 def create_Analysis_from_json(jsons):
     a = json.loads(jsons)
@@ -250,6 +349,7 @@ def diversity_analysis(tokens):
     lex_div = num_tokens * 1.0 / len(unique_tokens.keys())
     con_div = len(contents) * 1.0/len(unique_contents.keys())
     return (lex_div, con_div)
+
 
 """        
 def pos_tag(text):

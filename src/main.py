@@ -80,32 +80,34 @@ def handle_args(args):
 
 	return analyses
 
-analyses = handle_args(sys.argv)
-sys.stderr.write("\nGot " + str(len(analyses)) + " analyses.\n")
+if __name__ == "__main__":
 
-sys.stderr.write("\nLoaded analysis files.\n")
+	analyses = handle_args(sys.argv)
+	sys.stderr.write("\nGot " + str(len(analyses)) + " analyses.\n")
 
-nn = MyNN(27, .75)
-#rnn.rnn.reset()
-for analysis in analyses:
-	nn.add_sample_to_dataset(analysis)
+	sys.stderr.write("\nLoaded analysis files.\n")
 
-sys.stderr.write("\nAdded analyses to dataset.\n")
+	nn = MyNN(27, .75)
+	#rnn.rnn.reset()
+	for analysis in analyses:
+		nn.add_sample_to_dataset(analysis)
 
-nn.convert()
-print nn.DS
-print "\n\n\n"
-print "Training data: ", nn.trndata
-print "\n\n\n"
-print "Testing data: ", nn.tstdata
-print "\n\n\n"
+	sys.stderr.write("\nAdded analyses to dataset.\n")
 
-print "original parameters are: \n",
-nn.print_connections()
+	nn.convert()
+	print nn.DS
+	print "\n\n\n"
+	print "Training data: ", nn.trndata
+	print "\n\n\n"
+	print "Testing data: ", nn.tstdata
+	print "\n\n\n"
 
-sys.stderr.write("\nBeginning training.\n")
-nn.train()
-sys.stderr.write("\nFinished.\n")
+	print "original parameters are: \n",
+	nn.print_connections()
 
-iv = (0,1000,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
-nn.activate(iv)
+	sys.stderr.write("\nBeginning training.\n")
+	nn.train()
+	sys.stderr.write("\nFinished.\n")
+
+	iv = (0,1000,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+	nn.activate(iv)	

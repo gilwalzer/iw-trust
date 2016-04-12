@@ -7,14 +7,36 @@ import random
 def get_input_vector():
 	a = random.random()*1.5 + .5
 	b = random.random()*1.5
+	a1 = random.random()*1.5 + .5
+	b1 = random.random()*1.5	
+	a2 = random.random()*1.5 + .5
+	b2 = random.random()*1.5
+	a3 = random.random()*1.5 + .5
+	b3 = random.random()*1.5
+	a4 = random.random()*1.5 + .5
+	b4 = random.random()*1.5
+	a5 = random.random()*1.5 + .5
+	b5 = random.random()*1.5	
+	a6 = random.random()*1.5 + .5
+	b6 = random.random()*1.5
+	a7 = random.random()*1.5 + .5
+	b7 = random.random()*1.5
+	a8 = random.random()*1.5 + .5
+	b8 = random.random()*1.5
+	a9 = random.random()*1.5 + .5
+	b9 = random.random()*1.5
+	a10 = random.random()*1.5 + .5
+	b10 = random.random()*1.5
+	a11 = random.random()*1.5 + .5
+	b11 = random.random()*1.5
 
 	decide = random.random()
 	if decide > .5:
 		#return ((a, 2), (2))
-		return ((2, a), (1))
+		return ((2, a, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11), (1))
 	else:
 		#return ((b, 0), (0))
-		return ((0, b), (0))
+		return ((0, b, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11), (0))
 
 def print_connections(nn):
     for mod in nn.modules:
@@ -27,7 +49,7 @@ def print_connections(nn):
 def do_stuff():
 	#	a = read_analyses_json("GwernJSONAnalyses")
 
-	inputdim = 2
+	inputdim = 13
 	q = get_input_vector()
 	print q[0], q[1]
 
@@ -55,7 +77,7 @@ def do_stuff():
 
 def buildntrain(tstdata, trndata, od):
 
-	inputdim = 2 
+	inputdim = 13
 	nn = buildNetwork(inputdim, 3, od, hiddenclass=LSTMLayer, outclass=SoftmaxLayer, outputbias=False, recurrent=True)
 	    
 	trainer = BackpropTrainer(nn, trndata, learningrate = 0.0005, momentum = 0.99)
@@ -64,11 +86,11 @@ def buildntrain(tstdata, trndata, od):
 	                      validationData=tstdata,
 	                      maxEpochs=10)
 	print b1, b2, "\n", nn._params, "\n"
-	print "0:", nn.activate([0,0])
-	print "2:", nn.activate([2,2])
-	print ".5:", nn.activate([.5,.5])
-	print "1.5:", nn.activate([1.5,1.5])
-	print "1:", nn.activate([1, 1])
+	print "0:", nn.activate([0,0,0,0,0,0,0,0,0,0,0,0,0])
+	print "2:", nn.activate([2,2,2,2,2,2,2,2,2,2,2,2,2])
+	print ".5:", nn.activate([.5,.5,.5,.5,.5,.5,.5,.5,.5,.5,.5,.5,.5,])
+	print "1.5:", nn.activate([1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,])
+	print "1:", nn.activate([1, 1,1, 1,1, 1,1, 1,1, 1,1, 1,1])
 
 trnd, tstd = do_stuff()
 buildntrain(tstd, trnd, 1)

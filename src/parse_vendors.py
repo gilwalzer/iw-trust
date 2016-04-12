@@ -219,7 +219,9 @@ def scrape_profile(profile_scraped):
 
     months, unit = duration.split(" ")
     if "year" in unit:
-        months = str(int(months)*12)
+        months = int(months)*12
+    if months is 0:
+        months = 1
         
     #FIX THIS THING
     pss2 = re.sub("-----BEGIN PGP PUBLIC KEY BLOCK-----.+K-----", "", pss2)
