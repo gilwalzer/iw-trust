@@ -18,7 +18,7 @@ class Vendor:
         self.reviews = reviews
     
     def __str__(self):
-       sb = self.id + " " + self.username + "\n" + self.feedback + " " + self.transactions + "\n\n" + self.profile + "\n\n" + self.reviews_string
+       sb = self.id + " " + self.username + "\n" + str(self.feedback) + " " + str(self.transactions) + "\n\n" + self.profile + "\n\n" + self.reviews_string
        return unicode(sb)
 
 def create_Vendor_from_json(jsons):
@@ -29,6 +29,7 @@ def create_Vendor_from_json(jsons):
 # May be depreciated
 def parse_vendors(**keyword_parameters):
 
+    print "start"
     filepath = "../../Deep Web Data/"
     
     if "filepath" in keyword_parameters:
@@ -63,7 +64,8 @@ def parse_vendors(**keyword_parameters):
         
         # make sure the file hasn't been checked yet!
         filename_json = filename.split(".")[0] + ".json"
-        if filename_json not in scanned_files:
+        #if filename_json not in scanned_files:
+        if True:
             vendor_raw_html = ""
             with codecs.open(filepath_files + filename, "r", "utf-8") as vendor_file:
                 vendor_raw_html = vendor_file.read()
@@ -82,8 +84,11 @@ def parse_vendors(**keyword_parameters):
 
                 review_list = scrape_reviews(review_raw_info_2)
                 reviews = review_list_to_string(review_list)
-           
+            else:
+                review_list = []
+
             (username, duration, rank, feedback, transactions, fans, profile) = scrape_profile(profile_scraped)
+            #break
 
             profile = h.unescape(profile)
             profile = profile.replace('\\', '')
@@ -166,57 +171,104 @@ def scrape_profile(profile_scraped):
     for each in profile_scraped:
         if each is u"":
             pass
+        elif each is "\n":
+            profile_scraped_2.append(each)
         elif each.isspace():
             pass
         else:
             profile_scraped_2.append(each)
-            
+           
+    #print profile_scraped_2
+
+    dur_found, trans_found, rank_found, fans_found, feed_found = False, False, False, False, False
+
     for item in profile_scraped_2:
-        if item is u"category": # in item:
+        if u"category" in item:
             break
 
         if prev_item is None:
             username = item
 
-        elif "has been a vendor for" in prev_item:
+        elif "has been a vendor for" in prev_item and not dur_found:
             duration = item
+            dur_found = True
               # print duration
             #     print "prev_item"
 
-        elif "ranked in the" in prev_item:
+        elif "ranked in the" in prev_item and not rank_found:
+
             split = re.split("[top |%]", item)
             for each in split:
                 if len(each) > 0:
                     rank = each
                     #print "breaking"
+
+                    try:
+                        rank = float(rank)
+                    except:
+                        print rank, type(rank), username
+
                     break
-                    
-        elif "of sellers with" in prev_item: 
+            rank_found = True
+
+        elif ("of sellers with" in prev_item or "with" in prev_item) and not feed_found: 
+            if prev_item is u"with" or prev_item is "with":
+                rank = 100
+                rank_found = True
+                
             split = item.split("%")
             for each in split:
                 if each is not '':
                     feedback = each
-                    #print "breaking"
+                    try:
+                        feedback = float(feedback)
+                    except:
+                        print feedback, type(feedback), username
+                    #print "breaking"   
                     break
                     
-        elif item == " transactions":
+            feed_found = True
+
+        elif item == " transactions" and not trans_found:
             transactions = prev_item
             if "more than " in transactions:
                 transactions = transactions.split("more than ")[1]
-        
-        elif item == " fans - ": # in item:
+            try:
+                transactions = float(transactions)
+            except:
+                print transactions, type(transactions), username
+
+            trans_found = True
+
+        elif item == " fans - " and not fans_found: # in item:
             fans = prev_item
+
+            try:
+                fans = float(fans)
+            except:
+                print fans, type(fans)
         
+            fans_found = True
+            
         elif ("report this vendor" in prev_item) or (in_profile):
             in_profile = True
             profile_scraped_string = profile_scraped_string + item 
-            
+         
+        elif item is "\n":
+            profile_scraped_string = profile_scraped_string + " "   
         prev_item = item
 
-    pss2 = profile_scraped_string.replace(".\n", ". ")
-    pss2 = pss2.replace("\n", "")
-    pss2 = pss2.replace(u"\u2013", "-")
+    #print profile_scraped_string
 
+    pss2 = profile_scraped_string.replace(".\n", ". ")
+    pss2 = unicode(pss2)
+    pss2 = pss2.replace("\n", " ")
+    pss2 = pss2.replace(u"\u2013", "-")
+    pss2 = pss2.replace(u"\u00b4", "'")
+    
+    pss2 = re.sub("-----BEGIN PGP PUBLIC KEY BLOCK-----.+K-----", "", pss2)
+    
+   #print "\n", pss2
     months, unit = duration.split(" ")
     if "year" in unit:
         months = int(months)*12
@@ -224,6 +276,5 @@ def scrape_profile(profile_scraped):
         months = 1
         
     #FIX THIS THING
-    pss2 = re.sub("-----BEGIN PGP PUBLIC KEY BLOCK-----.+K-----", "", pss2)
     
     return (username, months, rank, feedback, transactions, fans, pss2)

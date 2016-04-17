@@ -38,10 +38,12 @@ class Analysis:
 
     """ expects list of strings """
     def make_input_vector(self, attrs):
-        params = analysis.flatten()
         param_list = []
+        params, param_tup = self.flatten()
            
         for each in attrs:
+            if each not in params:
+                pass
             param_list.append(params[each])
 
         param_tuple = tuple(n for n in param_list)
@@ -60,6 +62,9 @@ class Analysis:
             pass
 
         rank = self.rank
+        if rank is '' or rank is u'':
+            rank = 100.0
+            
         transactions = self.transactions
         fans = self.fans
 
@@ -90,8 +95,11 @@ class Analysis:
 
         n = self.nonimmediacy           # 2
 
-        self_ref = n[0]*1.0 / word_count
-        group_ref = n[1]*1.0 / word_count
+        if word_count is 0:
+            self_ref, group_ref = 0,0
+        else:
+            self_ref = n[0]*1.0 / word_count
+            group_ref = n[1]*1.0 / word_count
 
         e = self.emotiveness            # 1 
 
@@ -132,19 +140,22 @@ class Analyzer:
         self.spacy = SpacyCaller()
         
     def analyze(self, vendor):
+
         tokens = self.spacy.spacy_analyze_vendor(vendor)
-        
-        #print tokens
+    
         pos_count_tuple = pos_counts(tokens)
         quantity = quantity_analysis(tokens)
-        complexity = complexity_analysis(tokens)
+        complexity = complexity_analysis(tokens, vendor)
         uncertainty = uncertainty_analysis(tokens)
         nonimmediacy = nonimmediacy_analysis(tokens)
         emotiveness = emotiveness_analysis(pos_count_tuple)
         diversity = diversity_analysis(tokens)
-        review_sentiments = review_sentiment_analysis(vendor)
+
         profile_sentiments = profile_sentiment_analysis(vendor)
 
+        review_sentiments = review_sentiment_analysis(vendor)
+        
+ 
         fans = vendor.fans
         transactions = vendor.transactions
         feedback = vendor.feedback
@@ -253,10 +264,15 @@ def quantity_analysis(tokens):
     
     return (word_count, noun_phrase_count, sentence_count)
     
-def complexity_analysis(tokens):
+def complexity_analysis(tokens, vendor):
+
     (verb_count, noun_count, adj_count, adv_count, modal_count) = pos_counts(tokens)
+
     (word_count, noun_phrase_count, sentence_count) = quantity_analysis(tokens)
-    
+
+    if len(tokens.text) is 0 or word_count is 0 or noun_phrase_count is 0 or sentence_count is 0:
+        return (0,0,0,0,0)
+
     clause_count = 0
     for token in list(tokens):
         if ("VERB" in token.pos_):
@@ -274,7 +290,7 @@ def complexity_analysis(tokens):
     for token in list(tokens):
         character_count += len(token)
     avg_word_length = character_count*1.0/word_count
-    
+
     words_in_nc_count = 0.0
     nc = list(tokens.noun_chunks)
     for noun_chunk in nc:
@@ -283,10 +299,15 @@ def complexity_analysis(tokens):
     avg_length_np = words_in_nc_count / noun_phrase_count
     
     punct_count = 0.0
+    punct_dict = {}
     for token in tokens:
         if "PUNCT" in token.pos_:
             punct_count += 1
-    
+            if token.text in punct_dict:
+                punct_dict[token.text] += 1
+            else:
+                punct_dict[token.text] = 1
+
     pausality = punct_count / sentence_count
     
     complexity = (avg_num_of_clauses, avg_sentence_length, avg_word_length, avg_length_np, pausality)
@@ -337,15 +358,24 @@ def nonimmediacy_analysis(tokens):
     
 def emotiveness_analysis(counts):
     (verb_count, noun_count, adj_count, adv_count, modal_count) = counts
+    if (noun_count is 0 and verb_count is 0):
+        return 0
+    
     return (adj_count + adv_count*1.0) / (noun_count + verb_count)
     
 def diversity_analysis(tokens):
+
     num_tokens = len(tokens)
+    if num_tokens is 0:
+        return (0,0)
     unique_tokens = frequencies(tokens)
     #print unique_tokens
     contents = get_content_words(tokens)
     unique_contents = frequencies(contents)
     
+    if len(unique_contents.keys()) is 0 or len(unique_tokens.keys()) is 0:
+        #print tokens
+        return (0,0) 
     lex_div = num_tokens * 1.0 / len(unique_tokens.keys())
     con_div = len(contents) * 1.0/len(unique_contents.keys())
     return (lex_div, con_div)

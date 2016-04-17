@@ -8,7 +8,7 @@ from neuralnetwork import MyNN
 def handle_args(args):
 	analyses = []
 	if len(sys.argv) is 1 or len(sys.argv) > 4:
-		sys.stderr.write("\ncommands:\tpython main.py [sample (optional count)] \n\t\tpython main.py [json (v or a)]")
+		sys.stderr.write("\ncommands:\tpython main.py [sample (optional count)] \n\t\tpython main.py [json (v or a)]\n")
 		sys.exit(1)
 
 	elif len(sys.argv) is 2:
@@ -27,6 +27,19 @@ def handle_args(args):
 
 			debug.write_analyses_json(analyses, "GwernSampleJSONAnalyses")
 
+		elif "all" in sys.argv[1]:
+ 			vendors = debug.parse_all()
+
+			debug.write_vendors_json(vendors, "GwernJSON")
+
+			analyzer = Analyzer()
+			analyses = []
+			for each in vendors:
+				analysis = analyzer.analyze(each)
+				analyses.append(analysis)
+
+			debug.write_analyses_json(analyses, "GwernJSONAnalyses")
+
 		else:
 			# write the vendors that were parsed
 			vendors = debug.parse_all()
@@ -44,6 +57,7 @@ def handle_args(args):
 			analyses = debug.read_analyses_json("GwernJSONAnalyses")
 
 	elif len(sys.argv) is 3:
+
 		if sys.argv[1] == "sample":
 			sample_count = int(sys.argv[2]) 
 			vendors = debug.parse_sample(sample_count)
@@ -64,7 +78,7 @@ def handle_args(args):
 			if sys.argv[2] == "v":
 				sys.stderr.write("\nReading vendors.\n")
 				analyzer = Analyzer()
-				vendors = debug.read_vendors_json("GwernSampleJSON")
+				vendors = debug.read_vendors_json("GwernJSON")
 				#debug.write_vendors_json(vendors, "GwernSampleJSON")
 
 				analyses = []
@@ -80,9 +94,7 @@ def handle_args(args):
 
 	return analyses
 
-if __name__ == "__main__":
-
-	analyses = handle_args(sys.argv)
+def test_nn(analyses):
 	sys.stderr.write("\nGot " + str(len(analyses)) + " analyses.\n")
 
 	sys.stderr.write("\nLoaded analysis files.\n")
@@ -111,3 +123,8 @@ if __name__ == "__main__":
 
 	iv = (0,1000,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
 	nn.activate(iv)	
+	
+if __name__ == "__main__":
+
+	analyses = handle_args(sys.argv)
+	#test_nn(analyses)
