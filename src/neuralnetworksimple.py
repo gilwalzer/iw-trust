@@ -8,21 +8,27 @@ from pybrain.datasets           import ClassificationDataSet
 from pybrain.supervised         import BackpropTrainer
 from pybrain.tools.shortcuts     import buildNetwork
 
-import random, debug,sys, rigorous_analysis
+import random, debug,sys, rigorous_analysis, trust
 from rigorous_analysis import Analysis
 
 class MyNN:
     def __init__(self, inputdim, proportion):
         self.nb_classes = 2 # hard coded, change later
-        # self.inputdim = inputdim
-        self.inputdim = 9
+        self.inputdim = inputdim
+        
         self.scale = {}
+        self.attrs = []
         self.scaled = False
 
         self.proportion = proportion
         self.DS, self.trndata, self.tstdata = self.create_dataset()  #inputdim)   
         self.nn = self.create()
     
+    def set_attrs(self, attrs):
+        self.attrs = list(attrs)
+        if len(attrs) is not self.inputdim:
+            print "You gave wrong number of attributes"
+
     def create_dataset(self):
 
         DS = ClassificationDataSet(self.inputdim, nb_classes=self.nb_classes,
@@ -70,7 +76,7 @@ class MyNN:
 
     def scale_parameters(self, params):
 
-        attrs = Analysis.flat_attributes
+        attrs = self.attrs
         if not self.scaled:
             return params
 
@@ -93,25 +99,22 @@ class MyNN:
 
         return new_params
 
-    def add_sample_to_dataset(self, analysis):
+    """ evaluate method argument is a method from the trust class which returns a value for 
+    trustworthy and takes an analysis. It is up to the caller what it does, as long as it is 
+    implemented in trust.py. """
+    def add_sample_to_dataset(self, analysis, evaluate_method):
 
         params_dict, params_tuple = analysis.flatten()
         params = self.scale_parameters(params_dict)
         
-        months = float(analysis.months)
-        if months < 1:
-            months = 1
+        trustworthy = evaluate_method(analysis)
+        input_v = self.make_input_vector_from_scaled(params)
+        
+        # input_v = analysis.make_input_vector(self.attrs)
+        if input_v[0] is '' or input_v[0] is u'':
+            input_v = (100.0, input_v[1], input_v[2], input_v[3])
 
-        tpm = float(analysis.transactions) / months
-        trustworthy = 0
-        if (analysis.transactions > 100): #or fans > 100):
-            trustworthy = 1
-        #print trustworthy
-        #trustworthy = random.randint(0, 1)
-
-        input_v = (params["word_count"], params["sentence_count"], params["np_count"], params["avg_sentence_length"], 
-            params["modal_count"], params["con_d"], params["group_ref"], params["pcom"], params["rcom"])
-
+        #print input_v
         self.DS.addSample(input_v, (trustworthy))
         i = random.random()
         if i > self.proportion:
@@ -120,9 +123,9 @@ class MyNN:
             self.trndata.addSample(input_v, (trustworthy))
 
     def convert(self):
-        self.tstdata._convertToOneOfMany(bounds=(0, 1))
-        self.trndata._convertToOneOfMany(bounds=(0, 1))
-        self.DS._convertToOneOfMany(bounds=(0, 1))
+        self.tstdata._convertToOneOfMany(bounds=(0, self.nb_classes - 1))
+        self.trndata._convertToOneOfMany(bounds=(0, self.nb_classes - 1))
+        self.DS._convertToOneOfMany(bounds=(0, self.nb_classes - 1))
 
     def create(self):
 
@@ -156,25 +159,35 @@ class MyNN:
             t.trainEpochs(5)
 
         """
-        print self.nn.outdim, " nn | ", self.trndata.outdim, " trndata "
+        #print self.nn.outdim, " nn | ", self.trndata.outdim, " trndata "
         trainer = BackpropTrainer(self.nn, self.trndata, learningrate = 0.0005, momentum = 0.99)
         b1, b2 = trainer.trainUntilConvergence(verbose=True,
                               trainingData=self.trndata,
                               validationData=self.tstdata,
                               maxEpochs=10)
-        print b1, b2
-        print "new parameters are: "
-        self.print_connections()
+        #print b1, b2
+        #print "new parameters are: "
+        #self.print_connections()
 
+        return b1, b2
 
-    def activate_on_test(self, count, analyses):
+    def make_input_vector_from_scaled(self, params):
+
+        attrs = self.attrs
+        scaled_input_vector = []
+        for attr in attrs: 
+            scaled_input_vector.append(params[attr])
+
+        return tuple(scaled_input_vector)
+
+    def activate_on_test(self, analyses, *count):
         act_array = []
 
         if count > len(analyses):
             count = len(analyses) - 1
 
         for analysis in analyses:
-            inp = self.make_input_vector(analysis)    
+            inp = analysis.make_input_vector(self.attrs)    
             act = self.activate(inp)
 
             act_array.append((act, analysis))
@@ -184,45 +197,39 @@ class MyNN:
     def activate(self, input_v):
         return self.nn.activate(input_v)
 
-    def make_input_vector(self, analysis): #, attrs):
-        params, params_tuple = analysis.flatten()
-        input_v = (params["word_count"], params["sentence_count"], params["np_count"], params["avg_sentence_length"], 
-            params["modal_count"], params["con_d"], params["group_ref"], params["pcom"], params["rcom"])
-    
-        return input_v
-
 def main():
     analyses = debug.read_analyses_json("GwernJSONAnalyses")
     sys.stderr.write("\nGot " + str(len(analyses)) + " analyses.\n")
 
     sys.stderr.write("\nLoaded analysis files.\n")
 
-    nn = MyNN(2, .75)
+    nn = MyNN(4, .75)
     #rnn.rnn.reset()
+    
+    attrs = ["rank", "fans", "transactions", "feedback"]
+    nn.set_attrs(attrs)
+
+    """["word_count", "sentence_count", "np_count", "avg_sentence_length", 
+        "modal_count", "con_d", "group_ref", "pcom", "rcom"])
+    """
     nn.set_scale(analyses)
+
+    evaluate_method = trust.evaluate_trust_stupid
     for analysis in analyses[:-1]:
-        nn.add_sample_to_dataset(analysis)
+        nn.add_sample_to_dataset(analysis, evaluate_method)
 
     last = analyses[-1]
     sys.stderr.write("\nAdded analyses to dataset.\n")
 
     nn.convert()
-    """print nn.DS
-    print "\n\  n\n"
-    print "Training data: ", nn.trndata
-    print "\n\n\n"
-    print "Testing data: ", nn.tstdata
-    print "\n\n\n"
 
-    print "original parameters are: \n",
-    nn.print_connections()
-    """
     sys.stderr.write("\nBeginning training.\n")
     nn.train()
     sys.stderr.write("\nFinished.\n")
 
-    aa = nn.activate_on_test(20, analyses[-20:-1])
-    print "activated: ", aa, #debug.print_analyses([last])
+    aa = nn.activate_on_test(analyses[-20:-1], 20)
+    for each in aa:
+        print "activated an analysis. There were ", each[1].transactions, " transactions in ", each[1].months, "months, and there is a ", str(float(each[0][1])*100), "% chance that it is trustworthy.\n" ,# each[0], each[1].__dict__, "\n", #debug.print_analyses([last])
 
 if __name__ == "__main__":
     main()

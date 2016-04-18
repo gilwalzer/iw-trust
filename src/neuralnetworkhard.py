@@ -13,8 +13,8 @@ import pdb
 from rigorous_analysis import Analysis
 
 class MyNN:
-    def __init__(self, inputdim, proportion):
-        self.nb_classes = 3 # hard coded, change later
+    def __init__(self, inputdim, nb_classes, proportion):
+        self.nb_classes = nb_classes # hard coded, change later
         self.inputdim = inputdim
         
         self.scale = {}
@@ -32,14 +32,21 @@ class MyNN:
 
     def create_dataset(self):
 
+        if self.nb_classes is 2:
+            classes = ["Not Trustworthy", "KT", "Trustworthy"]
+        elif self.nb_classes is 3:
+            classes = ["Not Trustworthy", "Trustworthy"]
+        else:
+            classes = list(range(self.nb_classes))
+
         DS = ClassificationDataSet(self.inputdim, nb_classes=self.nb_classes,
-            class_labels=["Not Trustworthy", "KT", "Trustworthy"])
+            class_labels=classes)
 
         trndata = ClassificationDataSet(self.inputdim, nb_classes=self.nb_classes,
-            class_labels=["Not Trustworthy", "KT", "Trustworthy"])
+            class_labels=classes)
 
         tstdata = ClassificationDataSet(self.inputdim, nb_classes=self.nb_classes,
-            class_labels=["Not Trustworthy", "KT", "Trustworthy"])
+            class_labels=classes)
 
         #'Trustworthy 4', 'A bit tw 3', 'sm tw 2', 'a bit utw 1', 'Untrustworthy 0'])
         
@@ -119,7 +126,7 @@ class MyNN:
         params_dict, params_tuple = analysis.flatten()
         params = self.scale_parameters(params_dict)
         
-        trustworthy = evaluate_method(analysis, nb_classes=self.nb_classes, survey_data=survey_data, control_nn=control_nn, params=params)
+        trustworthy = evaluate_method(analysis, survey_data=survey_data, control_nn=control_nn, params=params)
         input_v = self.make_input_vector_from_scaled(params)
         
        # print input_v, params
@@ -139,9 +146,10 @@ class MyNN:
         assert(self.tstdata is not None)
 
     def convert(self):
-        self.tstdata._convertToOneOfMany(bounds=(0, self.nb_classes - 1))
-        self.trndata._convertToOneOfMany(bounds=(0, self.nb_classes - 1))
-        self.DS._convertToOneOfMany(bounds=(0, self.nb_classes - 1))
+        #pdb.set_trace()
+        self.tstdata._convertToOneOfMany(bounds=(0, 1)) #self.nb_classes - 1))
+        self.trndata._convertToOneOfMany(bounds=(0, 1)) #self.nb_classes - 1))
+        self.DS._convertToOneOfMany(bounds=(0, 1))  #self.nb_classes - 1))
 
     def create(self):
 
@@ -222,7 +230,7 @@ def main():
 
     sys.stderr.write("\nLoaded analysis files.\n")
 
-    nn = MyNN(4, .75)
+    nn = MyNN(4, 3, .75)
     #rnn.rnn.reset()
     
     attrs = ["rank", "fans", "transactions", "feedback"]

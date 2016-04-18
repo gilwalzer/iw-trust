@@ -88,6 +88,44 @@ def read_vendors_json(classifier):
 
     return vendors
 
+def write_final_results(classifier, threadname, keep_experiments):    
+    filepath = "../../Deep Web Data/" + classifier + "/"
+    try:
+        os.stat(filepath)
+    except:
+        os.mkdir(filepath) 
+    
+    with codecs.open(filepath + "final"+threadname +"results.txt", "w") as outFile:
+        outFile.write(json.dumps(keep_experiments))
+
+def write_intermediate_results(classifier, j, threadname, keep_experiments):
+    filepath = "../../Deep Web Data/" + classifier + "/"
+    try:
+        os.stat(filepath)
+    except:
+        os.mkdir(filepath) 
+    
+    with codecs.open(filepath + "intermediate"+threadname + str(j)+"results.txt", "w") as outFile:
+        outFile.write(json.dumps(keep_experiments))
+
+def write_each_attr_results(classifier, attrs, mse, results):
+    filepath = "../../Deep Web Data/" + classifier + "/"
+    filename = ""
+    for attr in attrs:
+        filename = filename + attr + "_"
+
+    filepath = filepath + filename + "/"
+    try:
+        os.stat(filepath)
+    except:
+        os.mkdir(filepath) 
+    
+    filepath = filepath + filename + "results.txt"
+
+    with codecs.open(filepath, "w+", errors="ignore") as outFile:
+        outFile.write(str(mse) + "\n" + json.dumps(results).encode("UTF-8"))
+
+
 def read_unanalyzed_vendors_json(classifier):
 
     filepath = "../../Deep Web Data/" + classifier

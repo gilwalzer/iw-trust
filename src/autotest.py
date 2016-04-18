@@ -44,7 +44,7 @@ Traindata 1:
 #from neuralnetworksimple import MyNN
 from neuralnetworkhard import MyNN
 import trust, debug, count_survey
-import itertools, pdb, time, sys, Queue
+import itertools, pdb, time, sys, Queue, thread, threading
 
 def initialize(analyses):
 
@@ -54,7 +54,7 @@ def initialize(analyses):
 	# class_thresholds: what are the bars set for calling a data point trustworthy?
 	# 0 to .9: untrustworthy
 	# .9 to 2: trustworthy 
-	# class_thresholds = [.9]
+	#class_thresholds = [1]
 
 	# or:
 	# 0 to .6: untrustworthy
@@ -81,7 +81,7 @@ def build_train_nn(analyses, attrs, evaluate_method, **keyword_args):
 	nb_classes = 3
 
 	#nn = MyNN(inputdim, nb_classes, .75)   
-	nn = MyNN(inputdim, .75)   
+	nn = MyNN(inputdim, nb_classes, .75)   
 	
 	nn.set_attrs(attrs)
 
@@ -156,6 +156,11 @@ def experiment(experimental_activations, control_activations, **kwargs):
 	else:
 		iterations = kwargs["iterations"]
 
+	if "verbose" not in kwargs:
+		verbose = False
+	else:
+		verbose = kwargs["verbose"]
+
 	num_analyses = len(experimental_activations)
 	
 	mse_sum = 0	
@@ -174,15 +179,22 @@ def experiment(experimental_activations, control_activations, **kwargs):
 			for k in range(len(exp_act_results)):
 				if exp_act_results[k] > .6:
 					exp_class = k
-			
+
 			for k in range(len(con_act_results)):
 				if con_act_results[k] > .6:
 					con_class = k
 
+			if verbose:
+				print max(exp_act_results), max(con_act_results)
+				print exp_class, con_class
+			
 			# if both analyses are identified identically, or neither is identified:
 			if con_class is exp_class:
 				mse = 0
-
+			
+			else:
+				mse = 1
+			"""
 			elif (con_class - exp_class)*(con_class - exp_class) is 1:
 				mse = 1
 			elif (con_class - exp_class)*(con_class - exp_class) is 4: 
@@ -191,7 +203,7 @@ def experiment(experimental_activations, control_activations, **kwargs):
 			# if one the classes could not be successfully identified 
 			else:
 				mse = 9
-
+			"""
 			mses += mse
 
 		mses = mses / iterations
@@ -199,31 +211,27 @@ def experiment(experimental_activations, control_activations, **kwargs):
 
 	return mse_sum
 
-def main():
+def print_activations(activations):
+	tups = []
+	for tup in activations:
+		tups.append(list(tup[0]))
 
-	start = time.time()
+	return tups
 
-	""" get list of all analyses """
-	train_test_analyses, experimental_analyses = get_analyses(count_survey.get_filenames())
+def evaluate_on_exps(name, trial_exp_attrs, otherdata):
+	
+	(control_activations, control_nn, train_test_analyses, experimental_analyses, survey_data, start) = otherdata
 
-	control_nn, fnames, survey_data = initialize(train_test_analyses)
-	control_activations = control_nn.activate_on_test(experimental_analyses)
-
-	experimental_attrs = generate_all_experimental_args()
-
-	#print all_attrs
-	#print len(all_attrs)
-	total_experiments = len(experimental_attrs)
 	keep_experiments = []#Queue.PriorityQueue()
-
+	backup_keep_experiments = []
 	i = 1
 	j = 1
 	#temp_experiments = Queue.PriorityQueue()
 		
-	avg_mse_50_experiments = 450
+	avg_mse_50_experiments = 50
 
-	trial_exp_attrs = experimental_attrs#[-4000:-1]
-	#print experimental_attrs[-4000:-3995]
+	total_experiments = len(trial_exp_attrs)
+
 	for exp in trial_exp_attrs:
 
 		#current1 = time.time()
@@ -253,7 +261,7 @@ def main():
 		#sys.stderr.write("Measured mse of " + str(mse_50) + " compared to avg mse of " +  str(avg_mse_50_experiments) + "\n")		
 		if mse_50 < avg_mse_50_experiments:
 
-			sys.stderr.write(str(exp) + " " + str(mse_50)+ "\n")
+			sys.stderr.write("Thread " + name + ": " + str(exp) + " " + str(mse_50)+ "\n")
 			avg_mse_50_experiments = (mse_50 + 0.0+ (i-1)*avg_mse_50_experiments) / i 
 
 			experimental_activations = experimental_nn.activate_on_test(experimental_analyses)
@@ -263,10 +271,14 @@ def main():
 			#sys.stderr.write("About to test mse 1k.\n")
 		
 			mse = experiment(experimental_activations, control_activations, iterations=1)
-			if mse < 1500:
-				sys.stderr.write(str(exp) + " " + str(mse)+ "\n")
-				keep_experiments.append((mse, exp, experimental_nn))
-	
+			if mse < 400: # 6000:
+				sys.stderr.write("Thread " + name + ": " + str(exp) + " " + str(mse)+ "\n")
+				backup_keep_experiments.append((mse, exp, experimental_nn))
+				if mse < 300: #3000:
+					#print "\n\n\n\n\n", "found activation that had a mse of less than 1000!\n"
+					tups = print_activations(experimental_activations)
+					debug.write_each_attr_results("GwernAttrResults", exp, mse, tups)
+					keep_experiments.append((mse, exp))
 			#current2 = time.time()
 			#sys.stderr.write("Just finished, that took " + str(current2-current1) +" .\n")
 
@@ -274,13 +286,13 @@ def main():
 			#if (i % 3) is 0:
 				#sys.stderr.write("Gone through " + str(i) + " out of total_experiments.\n")
 			
-#			temp_experiments.put((mse, exp, experimental_nn))
+		#temp_experiments.put((mse, exp, experimental_nn))
 				
 			if (i % 20) is 0:
 				#temp_experiments.put((mse, exp, experimental_nn))
 				current = time.time()
-				sys.stderr.write(str(current-start) + " seconds have elapsed since beginning of program.")
-				sys.stderr.write("So far, done full testing on " + str(i) + " possible combinations of attributes out of " + str(total_experiments) +  ".\n")
+				sys.stderr.write("Thread " + name + ": " + str(current-start) + " seconds have elapsed since beginning of program.")
+				sys.stderr.write("Thread " + name + ": So far, done full testing on " + str(i) + " possible combinations of attributes out of " + str(total_experiments) +  ".\n")
 				"""
 				for m in range(0, 5):
 					if not temp_experiments.empty():
@@ -291,18 +303,54 @@ def main():
 				temp_experiments = Queue.PriorityQueue()
 				"""
 			i+=1
-		else:			
-			if (j % 500) is 0:
-				current = time.time()
-				sys.stderr.write(str(current-start) + " seconds have elapsed since beginning of program.")
-				sys.stderr.write("Rejected " + str(j - i) + " out of " + str(j) +  ".\n")
+		#else:			
+		if (j % 500) is 0:
+			current = time.time()
+			sys.stderr.write("Thread " + name + ": " + str(current-start) + " seconds have elapsed since beginning of program.")
+			sys.stderr.write("Thread " + name + ": Rejected " + str(j - i) + " out of " + str(j) +  ".\n")
+
+			debug.write_intermediate_results("GwernIntermediateResults", j,  name, keep_experiments)
 
 		j+=1
 
-	#sorted_list = sorted(keep_experiments)
-	print keep_experiments
+	sorted_keep = sorted(keep_experiments)
+	debug.write_final_results("GwernFinalResults", name, sorted_keep)
+	
+	sorted_backup_keep = sorted(backup_keep_experiments)
+	debug.write_final_results("GwernFinalResults", name, sorted_backup_keep)
+	sys.stderr.write("Thread " + name + ": Printed all experiments.\n")
 
-	sys.stderr.write("Printed all experiments.\n")
+def main():
+
+	start = time.time()
+
+	""" get list of all analyses """
+	train_test_analyses, experimental_analyses = get_analyses(count_survey.get_filenames())
+
+	control_nn, fnames, survey_data = initialize(train_test_analyses)
+	control_activations = control_nn.activate_on_test(experimental_analyses)
+	
+	#print print_activations(control_activations)
+	experimental_attrs = generate_all_experimental_args()
+
+	#print all_attrs
+	#print len(all_attrs)
+	total_experiments = len(experimental_attrs)
+
+	trial_exp_attrs = experimental_attrs#[-100:-1]
+	#print experimental_attrs[-4000:-3995]
+		
+	""" open up a new thread for each slice of the experimental attrs """
+	
+	#"""
+	for i in range(0, ( (total_experiments-1)/1000) + 1):
+		name = "thread_" + str(i)
+
+		sys.stderr.write("Starting thread " + name + "\n")
+		thread.start_new_thread(evaluate_on_exps, (name, trial_exp_attrs[i*1000:min((i+1)*1000, total_experiments)],
+		 (control_activations, control_nn, train_test_analyses, experimental_analyses, survey_data, start)))
+	#"""
+	evaluate_on_exps("Thread 5", trial_exp_attrs, (control_activations, control_nn, train_test_analyses, experimental_analyses, survey_data, start))
 
 if __name__ == "__main__":
 	main()

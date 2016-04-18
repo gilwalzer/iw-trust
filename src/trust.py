@@ -49,6 +49,9 @@ def get_from_control_nn(analysis, **kwargs):
 	if "control_nn" in kwargs:
 		control_nn = kwargs["control_nn"]
 	
+	if "nb_classes" in kwargs:
+		nb_classes = kwargs["nb_classes"]
+		
 	params_dict, params_tuple = analysis.flatten()
 	params = control_nn.scale_parameters(params_dict)
 
