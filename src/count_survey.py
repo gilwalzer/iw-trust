@@ -121,3 +121,5 @@ def get_survey_data(seen_threshold, trust_class_thresholds):
 				data[k][ids[k][i]] = {"seen":seen, "ratio":ratio, "trust":trust_class} 
 	
 	return data
+
+print get_survey_results()

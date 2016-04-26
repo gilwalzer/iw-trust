@@ -129,7 +129,7 @@ class MyNN:
         trustworthy = evaluate_method(analysis, survey_data=survey_data, control_nn=control_nn, params=params)
         input_v = self.make_input_vector_from_scaled(params)
         
-       # print input_v, params
+       # print input_v, params0
         #print input_v, trustworthy, analysis.vendor_id 
         self.DS.addSample(input_v, (trustworthy))
         if trustworthy is not -1:     
@@ -177,7 +177,13 @@ class MyNN:
                 for cc in range(len(conn.params)):
                     print conn.whichBuffers(cc), conn.params[cc]
 
-    def train(self):
+    def train(self, **kwargs):
+
+        if "verbose" in kwargs:
+            verbose = kwargs["verbose"]
+        else:
+            verbose = False
+
         """t = BackpropTrainer(self.rnn, dataset=self.trndata, learningrate = 0.1, momentum = 0.0, verbose = True)
         for i in range(1000):
             t.trainEpochs(5)
@@ -188,7 +194,7 @@ class MyNN:
         trainer = BackpropTrainer(self.nn, self.trndata, learningrate = 0.0005, momentum = 0.99)
         assert (self.tstdata is not None)
         assert (self.trndata is not None)
-        b1, b2 = trainer.trainUntilConvergence(verbose=False,
+        b1, b2 = trainer.trainUntilConvergence(verbose=verbose,
                               trainingData=self.trndata,
                               validationData=self.tstdata,
                               maxEpochs=10)
